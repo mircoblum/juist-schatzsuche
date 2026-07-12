@@ -6,6 +6,8 @@
 <title>Töwerland-Schatzsuche · Juist</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@500;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <style>
   :root{
     --sea:#0E3A5D;
@@ -186,6 +188,20 @@
     transition:transform .12s;
   }
   .back:active{transform:scale(.96)}
+  .mapwrap{border-radius:14px;overflow:hidden;border:3px solid var(--sea);margin-bottom:10px}
+  .lmap{height:230px;width:100%}
+  .maplabel{
+    font-family:'Fredoka',sans-serif;font-weight:600;color:var(--sea);
+    font-size:.8rem;letter-spacing:.6px;text-transform:uppercase;
+    display:block;margin:2px 0 6px;
+  }
+  .applebtn{
+    display:block;text-align:center;text-decoration:none;
+    font-family:'Fredoka',sans-serif;font-weight:600;font-size:.95rem;
+    background:var(--white);color:var(--sea);border:2px solid var(--sea);
+    padding:11px;border-radius:14px;margin-bottom:14px;
+  }
+  .applebtn:active{transform:scale(.98)}
   .btn:disabled{opacity:.45;pointer-events:none}
   .preview{
     width:100%;max-height:280px;object-fit:cover;border-radius:14px;
@@ -332,7 +348,7 @@ const STATIONS = [
     riddle: "Geht zu dem Haus, in dem man auch bei Regen schwimmen kann – in echtem Meerwasser!"
   },
   {
-    place: "Station 9 · TöwerVital",
+    place: "Station 9 · Schwimmbad TöwerVital",
     q: "Mit welchem Wasser ist das Schwimmbecken hier gefüllt?",
     opts: ["Mit Leitungswasser", "Mit Meerwasser", "Mit Regenwasser"],
     a: 1,
@@ -358,7 +374,7 @@ const STATIONS = [
     riddle: "Am Ende der Brücke steht ein hohes Bauwerk aus Stahl, das aussieht wie ein riesiges Segel. Geht direkt darunter!"
   },
   {
-    place: "Station 11 · Seezeichen",
+    place: "Station 11 · Seezeichen (Segel)",
     q: "Wozu brauchen Schiffe ein Seezeichen?",
     opts: ["Als Klettergerüst für Matrosen", "Zur Orientierung auf dem Wasser", "Um Fische anzulocken"],
     a: 1,
@@ -384,6 +400,67 @@ const STATIONS = [
     riddle: ""
   }
 ];
+
+/* Koordinaten der Stationen (Quelle: Google Places).
+   !! Station 1: Platzhalter = heutiges Feuerwehrhaus (Mittelstrasse 3A).
+   Falls die ALTE Feuerwehr woanders steht, hier lat/lon anpassen. */
+const COORDS = [
+  { lat: 53.6781965, lon: 6.9989643, name: "Alte Feuerwehr" },
+  { lat: 53.6784396, lon: 6.9956231, name: "Rathaus" },
+  { lat: 53.6775960, lon: 6.9976390, name: "Inselkirche" },
+  { lat: 53.6790406, lon: 6.9956738, name: "Strandstraße" },
+  { lat: 53.6773847, lon: 6.9949475, name: "Kurplatz & Schiffchenteich" },
+  { lat: 53.6796877, lon: 6.9943998, name: "Kurhaus" },
+  { lat: 53.6799000, lon: 6.9962000, name: "Strandpromenade" },
+  { lat: 53.6798902, lon: 6.9981069, name: "Wasserturm" },
+  { lat: 53.6797561, lon: 6.9968900, name: "Schwimmbad TöwerVital" },
+  { lat: 53.6723856, lon: 6.9997190, name: "Seebrücke am Hafen" },
+  { lat: 53.6718038, lon: 6.9976322, name: "Seezeichen (Segel)" },
+  { lat: 53.6766363, lon: 6.9947361, name: "Nationalpark-Haus" }
+];
+
+function appleMapsUrl(c){
+  return "https://maps.apple.com/?ll=" + c.lat + "," + c.lon + "&q=" + encodeURIComponent(c.name) + "&z=18";
+}
+
+/* Interaktive Mini-Karte (OpenStreetMap) in einen Container zeichnen */
+function drawMap(el, c){
+  if(typeof L === "undefined"){ el.parentElement.style.display = "none"; return; }
+  const map = L.map(el, { zoomControl: true, attributionControl: true })
+    .setView([c.lat, c.lon], 17);
+  L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    maxZoom: 19,
+    attribution: "&copy; OpenStreetMap"
+  }).addTo(map);
+  L.circleMarker([c.lat, c.lon], {
+    radius: 10, color: "#E2504C", weight: 3, fillColor: "#E2504C", fillOpacity: .5
+  }).addTo(map).bindTooltip(c.name, { permanent: true, direction: "top", offset: [0, -10] }).openTooltip();
+  setTimeout(()=> map.invalidateSize(), 60);
+}
+
+/* Karten-Block (Mini-Karte + Apple-Karten-Link) fuer eine Zielstation an eine Card anhaengen */
+function appendTargetMap(card, stationIndex){
+  const c = COORDS[stationIndex];
+  if(!c) return;
+  const label = document.createElement("span");
+  label.className = "maplabel";
+  label.textContent = "\ud83d\uddfa\ufe0f Hier ist es genau:";
+  const wrap = document.createElement("div");
+  wrap.className = "mapwrap";
+  const m = document.createElement("div");
+  m.className = "lmap";
+  wrap.appendChild(m);
+  const a = document.createElement("a");
+  a.className = "applebtn";
+  a.href = appleMapsUrl(c);
+  a.target = "_blank";
+  a.rel = "noopener";
+  a.textContent = "\ud83d\udccd In Apple Karten \u00f6ffnen";
+  card.appendChild(label);
+  card.appendChild(wrap);
+  card.appendChild(a);
+  drawMap(m, c);
+}
 
 const TOTAL = STATIONS.length;
 
@@ -605,9 +682,11 @@ function renderSolved(){
     <div class="correct-banner">🌟 Kontrollfrage gelöst!</div>
     <div class="letterwon">Ihr habt einen Buchstaben gewonnen: <span>${CODE[memState.station]}</span></div>
     ${isLast ? "" : `<div class="riddle"><span class="rlabel">🧭 Euer nächstes Ziel</span>${st.riddle}</div>`}
+    <div id="mapSlot"></div>
     <button class="btn ${isLast ? "" : "sea"}" id="nextBtn">${isLast ? "🏴‍☠️ Lösungswort zeigen!" : "Wir sind da! ➜ Nächste Frage"}</button>
   `;
   stage.appendChild(card);
+  if(!isLast){ appendTargetMap(card.querySelector("#mapSlot"), memState.station + 1); }
   card.querySelector("#nextBtn").onclick = ()=>{
     memState.station += 1;
     memState.phase = "photo";
@@ -655,9 +734,11 @@ function renderIntro(){
     <div class="place">Eure Mission</div>
     <p class="qtext">${TOTAL} Stationen erwarten euch. An jeder Station macht ihr zuerst ein Foto für euer Schatz-Album. Dann kommt eine Frage, spannendes Inselwissen – und eine Kontrollfrage, die zeigt, ob ihr gut gelesen habt. Am Ende ergeben alle Buchstaben das Lösungswort für euren Schatz!</p>
     <div class="riddle"><span class="rlabel">🧭 Startpunkt</span>Geht zum alten Feuerwehrgebäude – zum zweiten Tor von links. Dort wartet die erste Frage.</div>
+    <div id="mapSlot"></div>
     <button class="btn" id="startBtn">Schatzsuche starten! 🏴‍☠️</button>
   `;
   stage.appendChild(card);
+  appendTargetMap(card.querySelector("#mapSlot"), 0);
   card.querySelector("#startBtn").onclick = ()=>{
     memState.phase = "photo";
     saveState();
