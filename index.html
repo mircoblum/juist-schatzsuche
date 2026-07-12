@@ -1,0 +1,737 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Töwerland-Schatzsuche · Juist</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@500;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --sea:#0E3A5D;
+    --wave:#2E8C96;
+    --sand:#F2E3C4;
+    --signal:#E2504C;
+    --sky:#DDF0F4;
+    --ink:#123047;
+    --white:#FFFFFF;
+    --ok:#2F9E68;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%}
+  body{
+    font-family:'Nunito',sans-serif;
+    background:linear-gradient(180deg,var(--sky) 0%,#BFE2E9 45%,var(--sand) 45.2%,var(--sand) 100%);
+    color:var(--ink);
+    min-height:100dvh;
+    display:flex;flex-direction:column;align-items:center;
+    padding:16px 14px 40px;
+  }
+  .app{width:100%;max-width:460px;display:flex;flex-direction:column;gap:14px}
+
+  /* Kopf mit Kompass */
+  header{text-align:center;padding-top:6px}
+  .compass{
+    width:56px;height:56px;margin:0 auto 6px;border-radius:50%;
+    background:var(--sea);position:relative;
+    box-shadow:0 3px 0 rgba(14,58,93,.25);
+  }
+  .compass::before{
+    content:"";position:absolute;left:50%;top:50%;
+    width:0;height:0;transform:translate(-50%,-58%);
+    border-left:8px solid transparent;border-right:8px solid transparent;
+    border-bottom:20px solid var(--signal);
+  }
+  .compass::after{
+    content:"";position:absolute;left:50%;top:50%;
+    width:0;height:0;transform:translate(-50%,-42%) rotate(180deg);
+    border-left:8px solid transparent;border-right:8px solid transparent;
+    border-bottom:20px solid var(--white);
+  }
+  h1{
+    font-family:'Fredoka',sans-serif;font-weight:700;
+    font-size:1.7rem;color:var(--sea);letter-spacing:.5px;line-height:1.15;
+  }
+  .sub{font-size:.9rem;font-weight:700;color:var(--wave);margin-top:2px}
+
+  /* Wimpelkette = Fortschritt */
+  .flags{
+    display:flex;justify-content:space-between;align-items:flex-start;
+    padding:10px 4px 0;position:relative;
+  }
+  .flags::before{
+    content:"";position:absolute;left:8px;right:8px;top:12px;height:3px;
+    background:var(--sea);border-radius:2px;opacity:.35;
+  }
+  .flag{
+    width:20px;height:28px;position:relative;z-index:1;
+    clip-path:polygon(0 0,100% 0,100% 62%,50% 100%,0 62%);
+    background:var(--white);border:0;transition:background .3s,transform .3s;
+    display:flex;align-items:flex-start;justify-content:center;
+    font-family:'Fredoka',sans-serif;font-size:.66rem;font-weight:600;color:var(--sea);
+    padding-top:3px;box-shadow:inset 0 0 0 2px rgba(14,58,93,.25);
+  }
+  .flag.done{background:var(--signal);color:var(--white);box-shadow:none;transform:translateY(-2px)}
+  .flag.now{background:var(--sea);color:var(--white);box-shadow:none;animation:bob 1.6s ease-in-out infinite}
+  @keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+
+  /* Buchstaben-Sammlung */
+  .letters{
+    display:flex;justify-content:center;align-items:center;gap:4px;flex-wrap:wrap;
+  }
+  .wordgap{width:10px}
+  .slot{
+    width:24px;height:32px;border-radius:7px;
+    background:rgba(255,255,255,.55);border:2px dashed rgba(14,58,93,.35);
+    display:flex;align-items:center;justify-content:center;
+    font-family:'Fredoka',sans-serif;font-size:1.05rem;font-weight:700;color:var(--sea);
+  }
+  .slot.filled{background:var(--white);border:2px solid var(--sea);animation:pop .4s ease}
+  @keyframes pop{0%{transform:scale(.4)}70%{transform:scale(1.15)}100%{transform:scale(1)}}
+
+  /* Karte */
+  .card{
+    background:var(--white);border-radius:20px;padding:20px 18px 22px;
+    box-shadow:0 6px 0 rgba(14,58,93,.12);
+    animation:slidein .35s ease;
+  }
+  @keyframes slidein{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+  .eyebrow{
+    display:inline-block;background:var(--sea);color:var(--white);
+    font-family:'Fredoka',sans-serif;font-weight:600;font-size:.8rem;
+    padding:4px 12px;border-radius:999px;margin-bottom:10px;letter-spacing:.4px;
+  }
+  .eyebrow.bonus{background:var(--wave)}
+  .eyebrow.wissen{background:var(--ok)}
+  .place{font-family:'Fredoka',sans-serif;font-weight:700;font-size:1.35rem;color:var(--sea);margin-bottom:6px}
+  .qtext{font-size:1.02rem;font-weight:700;line-height:1.45;margin-bottom:14px}
+
+  .opt{
+    display:block;width:100%;text-align:left;
+    font-family:'Nunito',sans-serif;font-size:1rem;font-weight:800;color:var(--ink);
+    background:var(--sky);border:2px solid transparent;border-radius:14px;
+    padding:13px 14px;margin-bottom:9px;cursor:pointer;transition:transform .12s,background .2s;
+  }
+  .opt:active{transform:scale(.98)}
+  .opt.wrong{background:#FBDAD8;border-color:var(--signal);animation:shake .4s}
+  @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+
+  .hint{
+    display:none;background:var(--sand);border-radius:12px;
+    padding:10px 12px;font-size:.9rem;font-weight:700;margin-top:4px;
+  }
+  .hint.show{display:block;animation:slidein .3s ease}
+
+  .fact{
+    background:var(--sky);border-left:5px solid var(--wave);
+    border-radius:12px;padding:14px;font-size:.97rem;line-height:1.55;font-weight:600;
+    margin:12px 0 16px;
+  }
+  .fact b{color:var(--sea)}
+  .readwarn{
+    text-align:center;font-size:.85rem;font-weight:800;color:var(--signal);
+    margin-bottom:12px;
+  }
+  .riddle{
+    background:var(--sand);border-left:5px solid var(--signal);
+    border-radius:12px;padding:12px 14px;font-size:.98rem;line-height:1.5;font-weight:700;
+    margin-bottom:14px;
+  }
+  .riddle .rlabel{
+    font-family:'Fredoka',sans-serif;font-weight:600;color:var(--signal);
+    font-size:.8rem;letter-spacing:.6px;text-transform:uppercase;display:block;margin-bottom:4px;
+  }
+  .btn{
+    display:block;width:100%;border:0;cursor:pointer;
+    font-family:'Fredoka',sans-serif;font-weight:600;font-size:1.1rem;
+    background:var(--signal);color:var(--white);
+    padding:15px;border-radius:16px;box-shadow:0 4px 0 #B03835;
+    transition:transform .12s;
+  }
+  .btn:active{transform:translateY(2px);box-shadow:0 2px 0 #B03835}
+  .btn.sea{background:var(--sea);box-shadow:0 4px 0 #092841}
+  .btn.sea:active{box-shadow:0 2px 0 #092841}
+  .btn.wave{background:var(--wave);box-shadow:0 4px 0 #1F6970}
+  .btn.wave:active{box-shadow:0 2px 0 #1F6970}
+
+  .correct-banner{
+    display:flex;align-items:center;gap:8px;
+    font-family:'Fredoka',sans-serif;font-weight:600;font-size:1.15rem;color:var(--ok);
+    margin-bottom:8px;
+  }
+  .letterwon{
+    text-align:center;font-weight:800;font-size:.95rem;color:var(--sea);
+    margin-bottom:12px;
+  }
+  .letterwon span{
+    display:inline-block;background:var(--sea);color:#fff;border-radius:8px;
+    padding:4px 12px;font-family:'Fredoka',sans-serif;font-size:1.3rem;margin-left:6px;
+  }
+
+  /* Finale */
+  .final .place{font-size:1.5rem}
+  .codeword{
+    text-align:center;font-family:'Fredoka',sans-serif;font-weight:700;
+    font-size:1.7rem;color:var(--signal);letter-spacing:3px;
+    background:var(--sand);border-radius:16px;padding:16px;margin:14px 0;
+    border:3px dashed var(--signal);
+  }
+  .reset{background:none;border:0;color:rgba(18,48,71,.45);font-weight:800;font-size:.78rem;
+    text-decoration:underline;cursor:pointer;margin:10px auto 0;display:block}
+  .back{
+    background:rgba(255,255,255,.7);border:2px solid rgba(14,58,93,.25);
+    color:var(--sea);font-family:'Fredoka',sans-serif;font-weight:600;font-size:.88rem;
+    padding:8px 16px;border-radius:999px;cursor:pointer;
+    align-self:flex-start;margin-bottom:-4px;
+    transition:transform .12s;
+  }
+  .back:active{transform:scale(.96)}
+  .btn:disabled{opacity:.45;pointer-events:none}
+  .preview{
+    width:100%;max-height:280px;object-fit:cover;border-radius:14px;
+    border:3px solid var(--sea);margin:12px 0;display:none;
+  }
+  .preview.show{display:block;animation:pop .4s ease}
+  .phototext{font-size:.98rem;font-weight:700;line-height:1.5;margin-bottom:14px}
+  .gallery{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:12px 0}
+  .gallery img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:10px;border:2px solid var(--sea)}
+  .gallery .ph{
+    background:var(--sky);border-radius:10px;aspect-ratio:1;
+    display:flex;align-items:center;justify-content:center;
+    font-family:'Fredoka',sans-serif;font-weight:600;color:var(--wave);font-size:1rem;
+  }
+
+  @media (prefers-reduced-motion:reduce){
+    *{animation:none!important;transition:none!important}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="compass" aria-hidden="true"></div>
+    <h1>Töwerland-Schatzsuche</h1>
+    <div class="sub">12 Stationen · Insel Juist</div>
+  </header>
+
+  <div class="flags" id="flags" aria-label="Fortschritt"></div>
+  <div class="letters" id="letters" aria-label="Gesammelte Buchstaben"></div>
+
+  <div id="stage"></div>
+  <button class="reset" id="resetBtn">Von vorn beginnen</button>
+</div>
+
+<script>
+/* Lösungswort: JUIST IST TOLL – ein Buchstabe pro Station */
+const CODE = ["J","U","I","S","T","I","S","T","T","O","L","L"];
+const WORD_BREAKS = [5, 8]; // Lücke nach JUIST und nach IST
+
+const STATIONS = [
+  {
+    place: "Station 1 · Alte Feuerwehr",
+    q: "Auf Juist gibt es fast keine Autos. Wer zieht hier die Wagen mit Koffern, Möbeln und Getränken durch den Ort?",
+    opts: ["Traktoren", "Pferde", "Elektro-Roller"],
+    a: 1,
+    hint: "Hört mal genau hin: Klipp-klapp, klipp-klapp …",
+    fact: "Juist ist eine <b>autofreie Insel</b>: Fast alles wird mit <b>Pferdekutschen</b> transportiert – die Koffer der Urlauber, die Möbel beim Umzug und sogar der Müll. Nur ganz wenige Fahrzeuge wie die der <b>Feuerwehr</b> dürfen einen Motor haben, damit im Notfall jede Minute zählt. Die Juister haben sich außerdem ein großes Ziel gesetzt: Die Insel soll bis zum Jahr <b>2030 klimaneutral</b> werden – das heißt, sie will das Klima gar nicht mehr belasten. Die Pferde sind dabei ein guter Anfang, denn sie brauchen kein Benzin, sondern nur Hafer und Heu.",
+    bq: "Bis zu welchem Jahr will Juist klimaneutral werden?",
+    bopts: ["2030", "2050", "3000"],
+    ba: 0,
+    bhint: "Es ist gar nicht mehr so lange hin …",
+    riddle: "Geht zu dem Haus, in dem der Bürgermeister arbeitet und wo Urlauber Fragen stellen dürfen. Dort weht oft eine Fahne."
+  },
+  {
+    place: "Station 2 · Rathaus",
+    q: "Die Juister haben einen Spitznamen für ihre Insel: „Töwerland“. Was bedeutet das?",
+    opts: ["Turmland", "Zauberland", "Tauchland"],
+    a: 1,
+    hint: "Es hat mit Magie zu tun … ✨",
+    fact: "„Töwerland“ heißt <b>Zauberland</b>. Das Wort kommt aus dem <b>Plattdeutschen</b> – einer alten Sprache, die an der Nordseeküste schon seit vielen hundert Jahren gesprochen wird, lange bevor es das heutige Hochdeutsch gab. „Töwern“ bedeutet auf Plattdeutsch „zaubern“. Viele ältere Insulaner sprechen bis heute Platt miteinander, und auch das Schwimmbad der Insel trägt den Zauber im Namen: <b>TöwerVital</b>. Den Spitznamen bekam die Insel, weil Dünen, Strand und Wattenmeer hier zusammen wie eine verzauberte Landschaft wirken.",
+    bq: "Was bedeutet das plattdeutsche Wort „töwern“?",
+    bopts: ["Türmen", "Zaubern", "Tauschen"],
+    ba: 1,
+    bhint: "Töwerland = Zauberland, also ist „töwern“ = …?",
+    riddle: "Sucht das Gotteshaus im Ortskern – ein Gebäude mit Turm und Glocken, in dem sonntags gesungen wird."
+  },
+  {
+    place: "Station 3 · Inselkirche",
+    q: "Wovor hatten die Menschen auf Juist früher die allergrößte Angst?",
+    opts: ["Vor Sturmfluten", "Vor Wölfen", "Vor Vulkanausbrüchen"],
+    a: 0,
+    hint: "Es kommt vom Meer und kann sehr, sehr hoch werden …",
+    fact: "<b>Sturmfluten</b> waren jahrhundertelang die größte Gefahr für die Inselbewohner. Wenn Sturm und Flut zusammenkamen, stieg das Wasser so hoch, dass es Häuser zerstörte und Land wegriss. Im Jahr <b>1932</b> brach eine schwere Sturmflut sogar mitten durch die Insel und riss ein großes Loch in die Dünen. Die Juister bauten die Lücke wieder zu – aber in der Senke sammelte sich Regenwasser, und so entstand der <b>Hammersee</b>: der größte Süßwassersee auf einer deutschen Nordseeinsel. Heute ist er ein wichtiges Zuhause für viele Vögel und Insekten.",
+    bq: "In welchem Jahr riss die Sturmflut ein Loch in die Insel?",
+    bopts: ["1832", "1932", "2002"],
+    ba: 1,
+    bhint: "Es war vor ungefähr 90 Jahren …",
+    riddle: "Geht zur Hauptstraße des Ortes – dort, wo die vielen Geschäfte, Bäckereien und Läden sind."
+  },
+  {
+    place: "Station 4 · Strandstraße",
+    q: "Juist ist die längste der Ostfriesischen Inseln. Wie lang ist sie ungefähr?",
+    opts: ["7 Kilometer", "17 Kilometer", "70 Kilometer"],
+    a: 1,
+    hint: "Mehr als 15, aber weniger als 20 …",
+    fact: "Juist ist ungefähr <b>17 Kilometer lang</b> und damit die längste der sieben Ostfriesischen Inseln. Gleichzeitig ist sie aber im Durchschnitt nur etwa <b>500 Meter breit</b> – eine lange, schmale Sandbank in der Nordsee! Man kann also an vielen Stellen in wenigen Minuten vom Wattenmeer im Süden zum Nordseestrand im Norden laufen. Insgesamt gibt es sieben Ostfriesische Inseln, und ein Merkspruch hilft, sie von West nach Ost aufzuzählen: „<b>W</b>elcher <b>S</b>eemann <b>l</b>iegt <b>b</b>ei <b>N</b>anni <b>i</b>m <b>B</b>ett“ – Wangerooge, Spiekeroog, Langeoog, Baltrum, Norderney, Juist, Borkum.",
+    bq: "Wie viele Ostfriesische Inseln gibt es insgesamt?",
+    bopts: ["Fünf", "Sieben", "Zwölf"],
+    ba: 1,
+    bhint: "Zählt die Wörter im Merkspruch: Welcher Seemann liegt bei Nanni im Bett …",
+    riddle: "Geht zum Platz mitten im Ort, wo Musik gespielt wird und Kinder kleine Schiffe auf einem Teich fahren lassen."
+  },
+  {
+    place: "Station 5 · Kurplatz & Schiffchenteich",
+    q: "Was lassen Kinder auf dem Schiffchenteich schwimmen?",
+    opts: ["Gummienten", "Papierflieger", "Modell-Segelboote"],
+    a: 2,
+    hint: "Manche bauen sie sogar selbst – mit Mast und Segel!",
+    fact: "Auf dem <b>Schiffchenteich</b> lassen Kinder schon seit vielen Jahrzehnten <b>Modell-Segelboote</b> fahren – manche sind kunstvoll selbst gebaut. Einen Motor brauchen die Boote nicht, denn der <b>Wind</b> treibt sie an: Das Segel fängt den Wind ein wie eine Hand, die geschoben wird. Genauso funktionierten früher auch die großen Segelschiffe, mit denen die Juister zur See fuhren. Viele Inselkinder lernten am Schiffchenteich zum ersten Mal, wie man ein Segel richtig in den Wind stellt – eine echte Seemannsschule im Kleinen.",
+    bq: "Wie wird ein Segelboot angetrieben?",
+    bopts: ["Das Segel fängt den Wind ein", "Ein versteckter Propeller", "Die Strömung des Teichs"],
+    ba: 0,
+    bhint: "Wie eine Hand, die geschoben wird …",
+    riddle: "Sucht das große, strahlend weiße Gebäude direkt am Strand. Es sieht aus wie ein Schloss am Meer."
+  },
+  {
+    place: "Station 6 · Kurhaus",
+    q: "Wie wird dieses berühmte weiße Gebäude oft genannt?",
+    opts: ["Das weiße Schloss am Meer", "Der Sandpalast", "Die Strandburg"],
+    a: 0,
+    hint: "Könige wohnen in einem … und es steht am Meer.",
+    fact: "Das Kurhaus wird <b>„das weiße Schloss am Meer“</b> genannt und ist über <b>100 Jahre</b> alt. Damals passierte etwas Neues: Ärzte entdeckten, dass <b>Meerwasser, Seeluft und Wind gesund</b> sind – gut für die Haut, die Lunge und das Herz. Plötzlich reisten viele Menschen an die Küste, um zu „kuren“, also sich zu erholen. Solche Orte nennt man deshalb <b>Seebäder</b>. Für die feinen Gäste baute man prächtige Häuser wie dieses Kurhaus. Das Wort „Kur“ steckt übrigens bis heute in vielen Juister Namen: Kurhaus, Kurplatz, Kurverwaltung.",
+    bq: "Warum reisten vor über 100 Jahren plötzlich so viele Menschen ans Meer?",
+    bopts: ["Weil es dort Freizeitparks gab", "Weil Ärzte Meerwasser und Seeluft für gesund erklärten", "Weil die Zugtickets verschenkt wurden"],
+    ba: 1,
+    bhint: "Es hatte mit der Gesundheit zu tun …",
+    riddle: "Bleibt oben am Strand und geht auf den langen Weg mit Geländer, von dem aus man aufs Meer und die Strandkörbe schaut."
+  },
+  {
+    place: "Station 7 · Strandpromenade",
+    q: "In welche Himmelsrichtung schaut ihr, wenn ihr von hier aufs Meer blickt?",
+    opts: ["Nach Süden", "Nach Norden", "Nach Osten"],
+    a: 1,
+    hint: "Wie heißt das Meer, in das ihr schaut? Nord…?",
+    fact: "Ihr schaut nach <b>Norden</b> – deshalb heißt der Strand <b>Nordstrand</b> und das Meer <b>Nordsee</b>. Die Promenade ist etwa <b>800 Meter</b> lang. Und jetzt wird es spannend für Sonnenuntergangs-Fans: Die Sonne geht im <b>Westen</b> unter. Wenn ihr aufs Meer schaut, ist Westen also <b>links</b> von euch. Weil Juist so lang und schmal ist und der Strand nach Norden zeigt, kann man hier abends zusehen, wie die Sonne scheinbar direkt ins Meer eintaucht – das gibt es an vielen Küsten Deutschlands nicht.",
+    bq: "Ihr steht an der Promenade und schaut aufs Meer. Auf welcher Seite geht abends die Sonne unter?",
+    bopts: ["Rechts von euch", "Links von euch", "Genau hinter euch"],
+    ba: 1,
+    bhint: "Blick nach Norden: Dann ist Westen auf der Seite, mit der man schreibt … bei den meisten jedenfalls nicht. 😉 Links!",
+    riddle: "Sucht den Turm auf der höchsten Düne der Insel. Die Juister sagen, er sieht aus wie eine dicke Flasche."
+  },
+  {
+    place: "Station 8 · Wasserturm",
+    q: "Was ist in diesem Turm gespeichert?",
+    opts: ["Trinkwasser", "Getreide", "Schätze der Insel"],
+    a: 0,
+    hint: "Der Name des Turms verrät es schon …",
+    fact: "Der <b>Wasserturm</b> wurde <b>1927</b> gebaut und speichert bis heute rund <b>250.000 Liter Trinkwasser</b> – so viel wie etwa 1.500 Badewannen! Er steht absichtlich auf der <b>höchsten Düne</b> der Insel (22 Meter hoch). Der Trick dahinter: Weil das Wasser so hoch liegt, drückt es von allein durch die Rohre in alle Häuser – ganz <b>ohne Pumpe</b>. Das nennt man Wasserdruck durch Höhe. Die Juister nennen den Turm liebevoll <b>„Doornkaatbuddel“</b>, weil er wie eine alte Flasche aussieht („Buddel“ ist Plattdeutsch für Flasche).",
+    bq: "Warum steht der Wasserturm ausgerechnet auf der höchsten Düne?",
+    bopts: ["Damit man ihn besser fotografieren kann", "Damit das Wasser von allein durch die Rohre in die Häuser drückt", "Damit er bei Flut nicht nass wird"],
+    ba: 1,
+    bhint: "Es hat mit Druck zu tun – Höhe hilft dem Wasser beim Fließen …",
+    riddle: "Geht zu dem Haus, in dem man auch bei Regen schwimmen kann – in echtem Meerwasser!"
+  },
+  {
+    place: "Station 9 · TöwerVital",
+    q: "Mit welchem Wasser ist das Schwimmbecken hier gefüllt?",
+    opts: ["Mit Leitungswasser", "Mit Meerwasser", "Mit Regenwasser"],
+    a: 1,
+    hint: "Es schmeckt salzig, wenn man einen Schluck erwischt …",
+    fact: "Das TöwerVital ist ein <b>Meerwasser-Erlebnisbad</b>: Das Wasser kommt aus der Nordsee. In Salzwasser schwimmt man leichter als im Badesee zu Hause – und das hat einen physikalischen Grund: Das gelöste <b>Salz macht das Wasser dichter</b>, also gewissermaßen „schwerer“. Dichteres Wasser drückt stärker von unten gegen den Körper – dieser Auftrieb trägt euch. Das extremste Beispiel ist das <b>Tote Meer</b> in Israel und Jordanien: Dort ist so viel Salz im Wasser, dass man sich einfach auf den Rücken legen und dabei Zeitung lesen kann, ohne unterzugehen.",
+    bq: "Warum trägt Salzwasser den Körper besser als Süßwasser?",
+    bopts: ["Weil Salz das Wasser dichter macht und der Auftrieb stärker ist", "Weil Salzwasser wärmer ist", "Weil im Salzwasser weniger Wellen sind"],
+    ba: 0,
+    bhint: "Denkt an das Wort „dichter“ – und an das Tote Meer …",
+    riddle: "Geht zum Hafen, wo die große Fähre anlegt, und lauft auf die lange Brücke hinaus, die über das Wasser führt."
+  },
+  {
+    place: "Station 10 · Seebrücke am Hafen",
+    q: "Die Fähre nach Juist kann nicht zu jeder Uhrzeit fahren. Warum?",
+    opts: ["Weil der Kapitän Mittagsschlaf macht", "Wegen Ebbe und Flut", "Weil es nachts zu dunkel ist"],
+    a: 1,
+    hint: "Zweimal am Tag ist das Wasser hier ziemlich flach …",
+    fact: "Die Fähre richtet sich nach <b>Ebbe und Flut</b>: Bei Niedrigwasser ist das Fahrwasser zu flach, das Schiff würde <b>im Watt stecken bleiben</b>. Deshalb hat Juist jeden Tag andere Fährzeiten. Aber woher kommen Ebbe und Flut überhaupt? Hauptverantwortlich ist der <b>Mond</b>: Seine Anziehungskraft zieht am Wasser der Ozeane und lässt es zu einem riesigen Wasserberg anschwellen, der um die Erde wandert. Deshalb gibt es an der Nordsee ungefähr <b>zweimal am Tag Hochwasser und zweimal Niedrigwasser</b> – im Rhythmus von gut sechs Stunden.",
+    bq: "Wer ist hauptverantwortlich für Ebbe und Flut?",
+    bopts: ["Der Wind", "Der Mond", "Die Fische"],
+    ba: 1,
+    bhint: "Er ist nachts am Himmel zu sehen und zieht am Wasser …",
+    riddle: "Am Ende der Brücke steht ein hohes Bauwerk aus Stahl, das aussieht wie ein riesiges Segel. Geht direkt darunter!"
+  },
+  {
+    place: "Station 11 · Seezeichen",
+    q: "Wozu brauchen Schiffe ein Seezeichen?",
+    opts: ["Als Klettergerüst für Matrosen", "Zur Orientierung auf dem Wasser", "Um Fische anzulocken"],
+    a: 1,
+    hint: "Es ist wie ein riesiges Straßenschild – aber für das Meer.",
+    fact: "Ein <b>Seezeichen</b> hilft Schiffen bei der <b>Orientierung</b> – wie ein Wegweiser auf dem Wasser. Auf dem Meer gibt es keine Straßen, aber sichere Fahrrinnen, die Kapitäne finden müssen. Dafür gibt es Leuchttürme, Bojen und eben Seezeichen. Juist hat keinen großen Leuchtturm im Ort – deshalb ist dieses <b>17 Meter</b> hohe Stahlbauwerk zum Wahrzeichen der Insel geworden. Es steht am Ende der <b>335 Meter langen Seebrücke</b>, ist einem Segel nachempfunden und darf sogar bestiegen werden: Von oben blickt man weit über das Wattenmeer.",
+    bq: "Wie lang ist die Seebrücke, an deren Ende das Seezeichen steht?",
+    bopts: ["35 Meter", "335 Meter", "3.350 Meter"],
+    ba: 1,
+    bhint: "Dreihundert und noch ein bisschen …",
+    riddle: "Ganz in der Nähe gibt es ein Haus, in dem ihr alles über Muscheln, Seehunde und das Watt lernen könnt."
+  },
+  {
+    place: "Station 12 · Nationalpark-Haus",
+    q: "Was passiert bei Ebbe mit dem Wattenmeer?",
+    opts: ["Es friert ein", "Der Meeresboden liegt frei und man kann darauf laufen", "Es wird zu einem See"],
+    a: 1,
+    hint: "Bei Ebbe zieht sich das Wasser zurück – und dann …?",
+    fact: "Bei Ebbe liegt der <b>Meeresboden frei</b> – dann kann man eine Wattwanderung machen! Das Wattenmeer ist <b>UNESCO-Weltnaturerbe</b>, es steht also auf derselben Liste besonders schützenswerter Orte wie die Pyramiden von Gizeh oder das Great Barrier Reef. Warum? Im Wattboden wimmelt es von Leben: Wattwürmer, Herzmuscheln und winzige Schnecken – ein riesiges, gedecktes Buffet. Deshalb machen hier jedes Jahr <b>Millionen Zugvögel</b> Rast: Sie fressen sich im Watt Fettreserven an, um ihre langen Reisen zu schaffen – manche fliegen bis nach Afrika oder sogar bis Sibirien.",
+    bq: "Warum ist das Watt für Millionen Zugvögel so wichtig?",
+    bopts: ["Sie finden dort massenhaft Nahrung für ihre lange Reise", "Sie baden dort gerne im Schlamm", "Sie bauen dort ihre Nester im Wasser"],
+    ba: 0,
+    bhint: "Denkt an das „gedeckte Buffet“ im Wattboden …",
+    riddle: ""
+  }
+];
+
+const TOTAL = STATIONS.length;
+
+/* ---------- Fotos (Schatz-Album) ---------- */
+const photos = {}; // Sitzungs-Cache
+async function loadPhoto(i){
+  if(photos[i]) return photos[i];
+  try{
+    const v = localStorage.getItem("juist-foto-" + i);
+    if(v){ photos[i] = v; return v; }
+  }catch(e){}
+  return null;
+}
+async function savePhoto(i, dataUrl){
+  photos[i] = dataUrl; // Sitzungs-Cache, funktioniert auch wenn der Speicher voll ist
+  try{ localStorage.setItem("juist-foto-" + i, dataUrl); }
+  catch(e){ /* Speicher voll: Foto bleibt fuer die Sitzung im Cache */ }
+}
+/* Bild verkleinern, damit es klein genug zum Speichern ist */
+function resizeImage(file){
+  return new Promise((resolve, reject)=>{
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = ()=>{
+      const max = 800;
+      const sc = Math.min(1, max / Math.max(img.width, img.height));
+      const w = Math.round(img.width * sc), h = Math.round(img.height * sc);
+      const c = document.createElement("canvas");
+      c.width = w; c.height = h;
+      c.getContext("2d").drawImage(img, 0, 0, w, h);
+      URL.revokeObjectURL(url);
+      resolve(c.toDataURL("image/jpeg", 0.65));
+    };
+    img.onerror = reject;
+    img.src = url;
+  });
+}
+function placeName(st){
+  const parts = st.place.split("\u00b7");
+  return (parts[1] || st.place).trim();
+}
+
+/* ---------- Speicher (mit Fallback) ---------- */
+/* Phasen: intro → question → fact (nur Erklärtext) → bonus (Kontrollfrage, eigene Seite) → solved (Buchstabe + Wegweiser) */
+let memState = { station: 0, phase: "intro" };
+async function loadState(){
+  try{
+    const v = localStorage.getItem("juist-schatz-v5");
+    if(v){ memState = JSON.parse(v); }
+  }catch(e){ /* kein gespeicherter Stand */ }
+}
+async function saveState(){
+  try{ localStorage.setItem("juist-schatz-v5", JSON.stringify(memState)); }catch(e){}
+}
+
+/* ---------- Rendering ---------- */
+const stage = document.getElementById("stage");
+const flagsEl = document.getElementById("flags");
+const lettersEl = document.getElementById("letters");
+
+function renderProgress(){
+  flagsEl.innerHTML = "";
+  lettersEl.innerHTML = "";
+  for(let i=0;i<TOTAL;i++){
+    const f = document.createElement("div");
+    f.className = "flag" + (i < memState.station ? " done" : (i === memState.station && memState.station < TOTAL ? " now" : ""));
+    f.textContent = i+1;
+    flagsEl.appendChild(f);
+
+    if(WORD_BREAKS.includes(i)){
+      const gap = document.createElement("div");
+      gap.className = "wordgap";
+      lettersEl.appendChild(gap);
+    }
+    const s = document.createElement("div");
+    const won = i < memState.station;
+    s.className = "slot" + (won ? " filled" : "");
+    s.textContent = won ? CODE[i] : "";
+    lettersEl.appendChild(s);
+  }
+}
+
+function buildOptions(container, opts, correctIndex, hintEl, onCorrect){
+  opts.forEach((o,i)=>{
+    const b = document.createElement("button");
+    b.className = "opt";
+    b.textContent = o;
+    b.onclick = ()=>{
+      if(i === correctIndex){
+        onCorrect();
+      }else{
+        b.classList.add("wrong");
+        hintEl.classList.add("show");
+        setTimeout(()=>b.classList.remove("wrong"), 450);
+      }
+    };
+    container.appendChild(b);
+  });
+}
+
+/* Seite 1: Foto-Beweis am Ort */
+async function renderPhoto(){
+  const st = STATIONS[memState.station];
+  const existing = await loadPhoto(memState.station);
+  const card = document.createElement("div");
+  card.className = "card";
+  card.innerHTML = `
+    <span class="eyebrow bonus">\ud83d\udcf8 Foto-Beweis</span>
+    <div class="place">${st.place}</div>
+    <p class="phototext">Schaut euch hier gut um! Macht zusammen ein Foto von <b>${placeName(st)}</b> f\u00fcr euer Schatz-Album. Erst mit Foto geht es weiter \u2013 am Ende k\u00f6nnt ihr euer ganzes Album anschauen!</p>
+    <input type="file" accept="image/*" capture="environment" id="cam" style="display:none">
+    <button class="btn wave" id="camBtn">\ud83d\udcf8 Foto machen</button>
+    <img class="preview" id="prev" alt="Euer Foto">
+    <button class="btn sea" id="goQ" disabled style="margin-top:10px">Foto ist drin \u27a1 Zur Frage</button>
+  `;
+  stage.appendChild(card);
+
+  const cam = card.querySelector("#cam");
+  const prev = card.querySelector("#prev");
+  const goQ = card.querySelector("#goQ");
+  const camBtn = card.querySelector("#camBtn");
+
+  if(existing){
+    prev.src = existing;
+    prev.classList.add("show");
+    goQ.disabled = false;
+    camBtn.textContent = "\ud83d\udcf8 Neues Foto machen";
+  }
+
+  camBtn.onclick = ()=> cam.click();
+  cam.onchange = async ()=>{
+    const file = cam.files && cam.files[0];
+    if(!file) return;
+    camBtn.textContent = "\u23f3 Foto wird gespeichert \u2026";
+    try{
+      const dataUrl = await resizeImage(file);
+      await savePhoto(memState.station, dataUrl);
+      prev.src = dataUrl;
+      prev.classList.add("show");
+      goQ.disabled = false;
+      camBtn.textContent = "\ud83d\udcf8 Neues Foto machen";
+    }catch(e){
+      camBtn.textContent = "\ud83d\udcf8 Nochmal versuchen";
+    }
+  };
+
+  goQ.onclick = ()=>{
+    memState.phase = "question";
+    saveState();
+    render();
+  };
+}
+
+/* Seite 2: Ortsfrage */
+function renderQuestion(){
+  const st = STATIONS[memState.station];
+  const card = document.createElement("div");
+  card.className = "card";
+  card.innerHTML = `
+    <span class="eyebrow">Frage ${memState.station+1} von ${TOTAL}</span>
+    <div class="place">${st.place}</div>
+    <p class="qtext">${st.q}</p>
+    <div id="opts"></div>
+    <div class="hint" id="hint">💡 Tipp: ${st.hint}</div>
+  `;
+  stage.appendChild(card);
+  buildOptions(
+    card.querySelector("#opts"), st.opts, st.a, card.querySelector("#hint"),
+    ()=>{ memState.phase = "fact"; saveState(); render(); }
+  );
+}
+
+/* Seite 2: Erklärtext (Inselwissen) */
+function renderFact(){
+  const st = STATIONS[memState.station];
+  const card = document.createElement("div");
+  card.className = "card";
+  card.innerHTML = `
+    <div class="correct-banner">✅ Richtig!</div>
+    <span class="eyebrow wissen">🧠 Inselwissen</span>
+    <div class="fact">${st.fact}</div>
+    <p class="readwarn">Lest genau – auf der nächsten Seite kommt eine Kontrollfrage dazu!</p>
+    <button class="btn wave" id="toBonusBtn">Alles gelesen ➜ Zur Kontrollfrage</button>
+  `;
+  stage.appendChild(card);
+  card.querySelector("#toBonusBtn").onclick = ()=>{
+    memState.phase = "bonus";
+    saveState();
+    render();
+  };
+}
+
+/* Seite 3: Kontrollfrage (ohne sichtbaren Erklärtext) */
+function renderBonus(){
+  const st = STATIONS[memState.station];
+  const card = document.createElement("div");
+  card.className = "card";
+  card.innerHTML = `
+    <span class="eyebrow bonus">⭐ Kontrollfrage ${memState.station+1}</span>
+    <div class="place">Gut aufgepasst?</div>
+    <p class="qtext">${st.bq}</p>
+    <div id="bopts"></div>
+    <div class="hint" id="bhint">💡 Tipp: ${st.bhint}</div>
+  `;
+  stage.appendChild(card);
+  buildOptions(
+    card.querySelector("#bopts"), st.bopts, st.ba, card.querySelector("#bhint"),
+    ()=>{ memState.phase = "solved"; saveState(); render(); }
+  );
+}
+
+/* Seite 4: Buchstabe + Wegweiser */
+function renderSolved(){
+  const st = STATIONS[memState.station];
+  const isLast = memState.station === TOTAL - 1;
+  const card = document.createElement("div");
+  card.className = "card";
+  card.innerHTML = `
+    <div class="correct-banner">🌟 Kontrollfrage gelöst!</div>
+    <div class="letterwon">Ihr habt einen Buchstaben gewonnen: <span>${CODE[memState.station]}</span></div>
+    ${isLast ? "" : `<div class="riddle"><span class="rlabel">🧭 Euer nächstes Ziel</span>${st.riddle}</div>`}
+    <button class="btn ${isLast ? "" : "sea"}" id="nextBtn">${isLast ? "🏴‍☠️ Lösungswort zeigen!" : "Wir sind da! ➜ Nächste Frage"}</button>
+  `;
+  stage.appendChild(card);
+  card.querySelector("#nextBtn").onclick = ()=>{
+    memState.station += 1;
+    memState.phase = "photo";
+    saveState();
+    render();
+  };
+}
+
+async function renderFinal(){
+  const card = document.createElement("div");
+  card.className = "card final";
+  card.innerHTML = `
+    <span class="eyebrow">Geschafft!</span>
+    <div class="place">🎉 Ihr habt alle ${TOTAL} Stationen und ${TOTAL} Kontrollfragen gelöst!</div>
+    <p class="qtext">Lauft zurück zur Ferienwohnung und sagt das Lösungswort. Dort wartet euer Schatz!</p>
+    <div class="codeword">JUIST&nbsp;IST&nbsp;TOLL</div>
+    <div class="fact">Ihr wisst jetzt mehr über Juist als die meisten Urlauber: Pferdekutschen und Klimaschutz, die Sturmflut von 1932, den Doornkaatbuddel, den Mond hinter Ebbe und Flut und das Weltnaturerbe Wattenmeer. Echte Töwerland-Experten! ⭐</div>
+    <div class="place" style="font-size:1.15rem;margin-top:14px">📸 Euer Schatz-Album</div>
+    <div class="gallery" id="gallery"></div>
+  `;
+  stage.appendChild(card);
+
+  const gal = card.querySelector("#gallery");
+  for(let i=0;i<TOTAL;i++){
+    const src = await loadPhoto(i);
+    if(src){
+      const im = document.createElement("img");
+      im.src = src;
+      im.alt = STATIONS[i].place;
+      gal.appendChild(im);
+    }else{
+      const ph = document.createElement("div");
+      ph.className = "ph";
+      ph.textContent = (i+1);
+      gal.appendChild(ph);
+    }
+  }
+}
+
+function renderIntro(){
+  const card = document.createElement("div");
+  card.className = "card";
+  card.innerHTML = `
+    <span class="eyebrow">Ahoi, Schatzsucher!</span>
+    <div class="place">Eure Mission</div>
+    <p class="qtext">${TOTAL} Stationen erwarten euch. An jeder Station macht ihr zuerst ein Foto für euer Schatz-Album. Dann kommt eine Frage, spannendes Inselwissen – und eine Kontrollfrage, die zeigt, ob ihr gut gelesen habt. Am Ende ergeben alle Buchstaben das Lösungswort für euren Schatz!</p>
+    <div class="riddle"><span class="rlabel">🧭 Startpunkt</span>Geht zum alten Feuerwehrgebäude – zum zweiten Tor von links. Dort wartet die erste Frage.</div>
+    <button class="btn" id="startBtn">Schatzsuche starten! 🏴‍☠️</button>
+  `;
+  stage.appendChild(card);
+  card.querySelector("#startBtn").onclick = ()=>{
+    memState.phase = "photo";
+    saveState();
+    render();
+  };
+}
+
+/* Eine Seite zurück – falls versehentlich auf Weiter gedrückt wurde.
+   Reihenfolge je Station: question → fact → bonus → solved → (nächste Station) */
+function goBack(){
+  if(memState.station >= TOTAL){
+    memState.station = TOTAL - 1;
+    memState.phase = "solved";
+  } else if(memState.phase === "solved"){
+    memState.phase = "bonus";
+  } else if(memState.phase === "bonus"){
+    memState.phase = "fact";
+  } else if(memState.phase === "fact"){
+    memState.phase = "question";
+  } else if(memState.phase === "question"){
+    memState.phase = "photo";
+  } else if(memState.phase === "photo"){
+    if(memState.station > 0){
+      memState.station -= 1;
+      memState.phase = "solved";
+    } else {
+      memState.phase = "intro";
+    }
+  }
+  saveState();
+  render();
+}
+
+function render(){
+  renderProgress();
+  stage.innerHTML = "";
+
+  /* Zurück-Button auf jeder Seite außer dem Intro */
+  if(memState.phase !== "intro" || memState.station >= TOTAL){
+    const back = document.createElement("button");
+    back.className = "back";
+    back.textContent = "‹ Zurück";
+    back.onclick = goBack;
+    stage.appendChild(back);
+    stage.style.display = "flex";
+    stage.style.flexDirection = "column";
+    stage.style.gap = "12px";
+  }
+
+  if(memState.station >= TOTAL){ renderFinal(); return; }
+  if(memState.phase === "intro"){ renderIntro(); return; }
+  if(memState.phase === "photo"){ renderPhoto(); return; }
+  if(memState.phase === "fact"){ renderFact(); return; }
+  if(memState.phase === "bonus"){ renderBonus(); return; }
+  if(memState.phase === "solved"){ renderSolved(); return; }
+  renderQuestion();
+}
+
+document.getElementById("resetBtn").onclick = ()=>{
+  if(confirm("Wirklich von vorn beginnen? Fortschritt und Fotos werden gelöscht.")){
+    memState = { station: 0, phase: "intro" };
+    for(let i=0;i<TOTAL;i++){
+      delete photos[i];
+      try{ localStorage.removeItem("juist-foto-" + i); }catch(e){}
+    }
+    saveState();
+    render();
+  }
+};
+
+(async ()=>{
+  await loadState();
+  render();
+})();
+</script>
+</body>
+</html>
